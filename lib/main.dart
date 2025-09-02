@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
        fontFamily: "Poppins"
       ),
-      home: PharmacieDashboardPage(),
+      home: LoginPharPage(),
       routes: {
     '/medicaments': (context) => ListesMedicamentsPage(),
     '/pharmacies': (context) => ListesPharmaciesPage(),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pharm/modules/landing/views/listespharmacies_page.dart';
+import 'package:pharm/modules/landing/views/patient/listespharmacies_page.dart';
 import 'package:pharm/utilitaires/apps_colors.dart';
 import 'package:pharm/composants/custom_bottom.dart';
 

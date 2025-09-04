@@ -46,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
               .doc(user.uid)
               .get();
 
-          if (snapshot.exists && snapshot["role"] == "patient") {
+          if (snapshot.exists && snapshot["role"] == "Patient") {
             // ✅ Autorisé → Navigation vers MainScreen
             Navigator.pushReplacement(
               context,

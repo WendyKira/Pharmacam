@@ -97,7 +97,7 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // ====== Pharmacies inscrites (users) ======
+          // Pharmacies inscrites
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("users")
@@ -131,7 +131,7 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
                       Icon(
                         Icons.local_pharmacy_outlined,
                         size: 64,
-                        color: Colors.grey,
+                        color: Colors.grey[400],
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -153,7 +153,7 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
                   docId: doc.id,
                   nom: doc['nom'] ?? "",
                   adresse: doc['adresse'] ?? "",
-                  telephone: doc['numeroDurgence'] ?? "",
+                  telephone: doc['telephone'] ?? "",
                   horaires: doc['horaires'] ?? "Non défini",
                   proprietaire: doc['responsable'] ?? "",
                   status: doc['statut'] ?? "inconnu",
@@ -170,10 +170,10 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
             },
           ),
 
-          // ====== Pharmacies de garde (gardes) ======
+          // Pharmacies de garde
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection("gardes") // ✅ on prend les pharmacies ici
+                .collection("gardes") // 🔥 récupération depuis "gardes"
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -202,7 +202,7 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
                       Icon(
                         Icons.local_hospital_outlined,
                         size: 64,
-                        color: Colors.grey,
+                        color: Colors.grey[400],
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -224,7 +224,7 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
                   docId: doc.id,
                   nom: doc['nom'] ?? "",
                   adresse: doc['adresse'] ?? "",
-                  telephone: doc['numeroDurgence'] ?? "",
+                  telephone: doc['telephone'] ?? "",
                   horaires: doc['horaires'] ?? "Non défini",
                   proprietaire: doc['responsable'] ?? "",
                   status: "garde",
@@ -246,7 +246,6 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
   }
 }
 
-// ========== Widgets réutilisables (inchangés) ==========
 class PharmacyListView extends StatelessWidget {
   final List<Pharmacy> pharmacies;
   final bool isGuard;
@@ -441,7 +440,6 @@ class PharmacyCard extends StatelessWidget {
   }
 }
 
-// ========== BottomSheet Médicaments (inchangé) ==========
 class MedicamentsBottomSheet extends StatelessWidget {
   final Pharmacy pharmacy;
 
@@ -463,6 +461,7 @@ class MedicamentsBottomSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Handle
           Container(
             width: 40,
             height: 4,
@@ -472,6 +471,8 @@ class MedicamentsBottomSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
@@ -529,18 +530,32 @@ class MedicamentsBottomSheet extends StatelessWidget {
             ),
           ),
 
-          // Liste des médicaments (toujours sous users -> produits)
+          // Medications List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
                   .doc(pharmacy.docId)
                   .collection('produits')
+                  .where("isActive", isEqualTo: true) // 🔥 uniquement actifs
                   .snapshots(),
               builder: (context, medsSnap) {
                 if (medsSnap.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(strokeWidth: 3),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(strokeWidth: 3),
+                        SizedBox(height: 16),
+                        Text(
+                          'Chargement des médicaments...',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
                 if (!medsSnap.hasData || medsSnap.data!.docs.isEmpty) {
@@ -548,8 +563,11 @@ class MedicamentsBottomSheet extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.medication_outlined,
-                            size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.medication_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           "Aucun médicament disponible",
@@ -571,7 +589,6 @@ class MedicamentsBottomSheet extends StatelessWidget {
                   final format = data['format'] ?? "";
                   final conditionnement = data['conditionnement'] ?? "";
                   final prix = data['price'] ?? 0;
-                  final stock = data['stock'] ?? 0;
                   final urgence = data['urgence'] ?? false;
 
                   final displayNom = [nom, format, conditionnement]
@@ -580,9 +597,6 @@ class MedicamentsBottomSheet extends StatelessWidget {
 
                   return Medicament(
                     nom: displayNom,
-                    stock: stock is int
-                        ? stock
-                        : int.tryParse(stock.toString()) ?? 0,
                     prix: "$prix FCFA",
                     urgence: urgence,
                   );
@@ -607,7 +621,6 @@ class MedicamentsBottomSheet extends StatelessWidget {
   }
 }
 
-
 class MedicamentCard extends StatelessWidget {
   final Medicament medicament;
   final bool isGuard;
@@ -620,18 +633,6 @@ class MedicamentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Stock max arbitraire (200 unités par défaut, adapte selon ton besoin)
-    const int maxStock = 200;
-
-    // Normalisation du niveau de stock (entre 0.0 et 1.0)
-    final double stockLevel =
-    (maxStock == 0 ? 0.0 : (medicament.stock / maxStock))
-        .clamp(0.0, 1.0)
-        .toDouble();
-
-    final bool isLowStock = medicament.stock < 50 && medicament.stock > 0;
-    final bool isOutOfStock = medicament.stock == 0;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -657,158 +658,53 @@ class MedicamentCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medicament.nom,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          medicament.prix,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    medicament.nom,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  children: [
-                    if (isGuard && medicament.urgence)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'URGENT',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isOutOfStock
-                            ? Colors.red.withOpacity(0.1)
-                            : isLowStock
-                            ? Colors.orange.withOpacity(0.1)
-                            : Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${medicament.stock} unités',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isOutOfStock
-                              ? Colors.red[700]
-                              : isLowStock
-                              ? Colors.orange[700]
-                              : Colors.green[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Stock indicator
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Niveau de stock',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      isOutOfStock
-                          ? 'Épuisé'
-                          : isLowStock
-                          ? 'Stock faible'
-                          : 'Disponible',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isOutOfStock
-                            ? Colors.red[600]
-                            : isLowStock
-                            ? Colors.orange[600]
-                            : Colors.green[600],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: stockLevel,
-                    minHeight: 8,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isOutOfStock
-                          ? Colors.red
-                          : isLowStock
-                          ? Colors.orange
-                          : Colors.green,
-                    ),
+                Text(
+                  medicament.prix,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isGuard ? const Color(0xFFEF4444) : AppColors.primary,
                   ),
                 ),
               ],
             ),
+            if (medicament.urgence) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Disponible en urgence',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFEF4444),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
-
-
-// ====== Models ======
 
 class Pharmacy {
   final int id;
@@ -836,13 +732,11 @@ class Pharmacy {
 
 class Medicament {
   final String nom;
-  final int stock;
   final String prix;
   final bool urgence;
 
   Medicament({
     required this.nom,
-    required this.stock,
     required this.prix,
     this.urgence = false,
   });

@@ -21,6 +21,7 @@ class _PharmacieRegisterPageState extends State<PharmacieRegisterPage> {
   final TextEditingController _villeController = TextEditingController();
   final TextEditingController _responsableController = TextEditingController();
   final TextEditingController _horairesController = TextEditingController();
+  final TextEditingController _numeroDurgenceController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
@@ -64,6 +65,7 @@ class _PharmacieRegisterPageState extends State<PharmacieRegisterPage> {
         "ville": _villeController.text.trim(),
         "responsable": _responsableController.text.trim(),
         "horaires": _horairesController.text.trim(),
+        "numeroDurgence": _numeroDurgenceController.text.trim(),
         "role": "Pharmacie",
         "statut": "Actif",
         "date_creation": DateTime.now(),
@@ -113,6 +115,7 @@ class _PharmacieRegisterPageState extends State<PharmacieRegisterPage> {
               _buildTextField(_adresseController, "Adresse"),
               _buildTextField(_villeController, "Ville"),
               _buildTextField(_horairesController, "horaires"),
+              _buildTextField(_numeroDurgenceController, "numeroDurgence"),
               _buildPasswordField(_passwordController, "Mot de passe", _obscurePassword, () => setState(() => _obscurePassword = !_obscurePassword)),
               _buildPasswordField(_confirmController, "Confirmer Mot de passe", _obscureConfirmPassword, () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
               SizedBox(height: 20),

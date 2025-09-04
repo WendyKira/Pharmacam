@@ -31,6 +31,8 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
       builder: (context) => MedicamentsBottomSheet(pharmacy: pharmacy),
     );
   }
@@ -38,34 +40,64 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E293B),
         elevation: 0,
         title: const Text(
-          'Gestion des Pharmacies',
+          'Pharmacies',
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E293B),
           ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Pharmacies Inscrites'),
-            Tab(text: 'Pharmacies de Garde'),
-          ],
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: AppColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              indicatorPadding: const EdgeInsets.all(2),
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFF64748B),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              tabs: const [
+                Tab(text: 'Toutes les Pharmacies'),
+                Tab(text: 'Pharmacies de Garde'),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Pharmacies inscrites
+          // ====== Pharmacies inscrites (users) ======
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("users")
@@ -74,22 +106,58 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(strokeWidth: 3),
+                      SizedBox(height: 16),
+                      Text(
+                        'Chargement des pharmacies...',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("Aucune pharmacie inscrite"));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.local_pharmacy_outlined,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Aucune pharmacie inscrite",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final pharmacies = snapshot.data!.docs.map((doc) {
                 return Pharmacy(
                   id: doc.id.hashCode,
+                  docId: doc.id,
                   nom: doc['nom'] ?? "",
                   adresse: doc['adresse'] ?? "",
-                  telephone: doc['telephone'] ?? "",
+                  telephone: doc['numeroDurgence'] ?? "",
                   horaires: doc['horaires'] ?? "Non défini",
                   proprietaire: doc['responsable'] ?? "",
                   status: doc['statut'] ?? "inconnu",
-                  medicaments: [], // ⚡ à remplir si tu ajoutes une sous-collection
+                  medicaments: [],
                 );
               }).toList();
 
@@ -102,31 +170,64 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
             },
           ),
 
-          // Pharmacies de garde
+          // ====== Pharmacies de garde (gardes) ======
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection("users")
-                .where("role", isEqualTo: "Pharmacie")
-                .where("statut", isEqualTo: "Garde")
+                .collection("gardes") // ✅ on prend les pharmacies ici
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(strokeWidth: 3),
+                      SizedBox(height: 16),
+                      Text(
+                        'Chargement des pharmacies de garde...',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("Aucune pharmacie de garde"));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.local_hospital_outlined,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Aucune pharmacie de garde",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final pharmacies = snapshot.data!.docs.map((doc) {
                 return Pharmacy(
                   id: doc.id.hashCode,
+                  docId: doc.id,
                   nom: doc['nom'] ?? "",
                   adresse: doc['adresse'] ?? "",
-                  telephone: doc['telephone'] ?? "",
+                  telephone: doc['numeroDurgence'] ?? "",
                   horaires: doc['horaires'] ?? "Non défini",
                   proprietaire: doc['responsable'] ?? "",
                   status: "garde",
-                  dateGarde: doc['date_garde'], // si tu stockes une période
                   medicaments: [],
                 );
               }).toList();
@@ -145,11 +246,11 @@ class _ListesPharmaciesPageState extends State<ListesPharmaciesPage>
   }
 }
 
-
+// ========== Widgets réutilisables (inchangés) ==========
 class PharmacyListView extends StatelessWidget {
   final List<Pharmacy> pharmacies;
   final bool isGuard;
-  final Function(Pharmacy) onPharmacyTap;
+  final void Function(Pharmacy) onPharmacyTap;
 
   const PharmacyListView({
     Key? key,
@@ -160,68 +261,17 @@ class PharmacyListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-
-        // Liste des pharmacies
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: pharmacies.length + (isGuard ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (isGuard && index == pharmacies.length) {
-                return _buildGuardInfoCard();
-              }
-              return PharmacyCard(
-                pharmacy: pharmacies[index],
-                isGuard: isGuard,
-                onTap: () => onPharmacyTap(pharmacies[index]),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGuardInfoCard() {
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        border: Border.all(color: Colors.red[200]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info, color: Colors.red[700]),
-              const SizedBox(width: 8),
-              Text(
-                'Information importante',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[800],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Les pharmacies de garde sont disponibles 24h/24 ou durant les week-ends. '
-                'Elles disposent de médicaments d\'urgence et peuvent facturer des frais '
-                'supplémentaires pour les services de garde.',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.red[700],
-            ),
-          ),
-        ],
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: pharmacies.length,
+      itemBuilder: (context, index) {
+        final pharmacy = pharmacies[index];
+        return PharmacyCard(
+          pharmacy: pharmacy,
+          isGuard: isGuard,
+          onTap: () => onPharmacyTap(pharmacy),
+        );
+      },
     );
   }
 }
@@ -240,137 +290,158 @@ class PharmacyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isGuard ? Colors.red : AppColors.primary,
-          width: 2,
-        ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // En-tête avec nom et badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      pharmacy.nom,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isGuard
+                            ? const Color(0xFFEF4444).withOpacity(0.1)
+                            : AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isGuard ? Icons.local_hospital : Icons.local_pharmacy,
+                        color:
+                        isGuard ? const Color(0xFFEF4444) : AppColors.primary,
+                        size: 24,
                       ),
                     ),
-                  ),
-                  if (isGuard)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.shield, size: 16, color: Colors.red[600]),
-                          const SizedBox(width: 4),
                           Text(
-                            'DE GARDE',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red[600],
+                            pharmacy.nom,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
                             ),
                           ),
+                          const SizedBox(height: 4),
+                          if (isGuard)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'PHARMACIE DE GARDE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: Colors.grey[500],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        pharmacy.adresse,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_outlined,
+                      color: Colors.grey[500],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      pharmacy.horaires,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                if (pharmacy.telephone.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone_outlined,
+                        color: Colors.grey[500],
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        pharmacy.telephone,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-              const SizedBox(height: 16),
-
-              // Informations de la pharmacie
-              _buildInfoRow(Icons.location_on, pharmacy.adresse),
-              const SizedBox(height: 8),
-              _buildInfoRow(Icons.phone, pharmacy.telephone),
-              const SizedBox(height: 8),
-              _buildInfoRow(Icons.access_time, pharmacy.horaires),
-
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              // Propriétaire et date de garde
-              Text(
-                'Propriétaire: ${pharmacy.proprietaire}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                ),
-              ),
-              if (isGuard && pharmacy.dateGarde != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Période de garde: ${pharmacy.dateGarde}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red[600],
-                  ),
-                ),
               ],
-
-              const SizedBox(height: 16),
-
-              // Bouton pour voir les médicaments
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Cliquer pour voir les médicaments →',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isGuard ? Colors.red[600] : AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
+// ========== BottomSheet Médicaments (inchangé) ==========
 class MedicamentsBottomSheet extends StatelessWidget {
   final Pharmacy pharmacy;
 
@@ -385,211 +456,157 @@ class MedicamentsBottomSheet extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      height: screenHeight * 0.7,
+      height: screenHeight * 0.85,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(25),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
-          // Poignée de glissement
           Container(
-            margin: const EdgeInsets.only(top: 12),
             width: 40,
             height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[400],
+              color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // En-tête de la pharmacie
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isGuard
-                    ? [AppColors.secondary, AppColors.secondary] // ou les noms que vous avez définis
-                    : [AppColors.primary, AppColors.primaryDark],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(25),
-                topRight: Radius.circular(25),
+              color: isGuard
+                  ? const Color(0xFFEF4444).withOpacity(0.05)
+                  : AppColors.primary.withOpacity(0.05),
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isGuard
+                        ? const Color(0xFFEF4444).withOpacity(0.1)
+                        : AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.medication_outlined,
+                    color: isGuard ? const Color(0xFFEF4444) : AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         pharmacy.nom,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
                         ),
                       ),
-                    ),
-                    if (isGuard)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.shield, size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'DE GARDE',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  pharmacy.adresse,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                ),
-                if (isGuard && pharmacy.dateGarde != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Période de garde: ${pharmacy.dateGarde}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Contenu scrollable
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // En-tête des médicaments
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.medication,
-                        color: Colors.green[600],
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
+                      const SizedBox(height: 4),
                       Text(
-                        'Médicaments disponibles (${pharmacy.medicaments.length})',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                        'Médicaments disponibles',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                ),
+              ],
+            ),
+          ),
 
-                  // Grille des médicaments
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: pharmacy.medicaments.length,
-                    itemBuilder: (context, index) {
-                      return MedicamentCard(
-                        medicament: pharmacy.medicaments[index],
-                        isGuard: isGuard,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Informations de contact
-                  Card(
-                    color: isGuard ? Colors.red[50] : Colors.blue[50],
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Informations de contact',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isGuard ? Colors.red[800] : Colors.blue[800],
-                            ),
+          // Liste des médicaments (toujours sous users -> produits)
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(pharmacy.docId)
+                  .collection('produits')
+                  .snapshots(),
+              builder: (context, medsSnap) {
+                if (medsSnap.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  );
+                }
+                if (!medsSnap.hasData || medsSnap.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.medication_outlined,
+                            size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Aucun médicament disponible",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B),
                           ),
-                          const SizedBox(height: 12),
-                          _buildContactInfo('Téléphone', pharmacy.telephone),
-                          _buildContactInfo('Horaires', pharmacy.horaires),
-                          _buildContactInfo('Propriétaire', pharmacy.proprietaire),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ),
+                  );
+                }
 
-                  const SizedBox(height: 20),
-                ],
-              ),
+                final produitsDocs = medsSnap.data!.docs;
+                final meds = produitsDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final nom = data['name'] ?? "";
+                  final format = data['format'] ?? "";
+                  final conditionnement = data['conditionnement'] ?? "";
+                  final prix = data['price'] ?? 0;
+                  final stock = data['stock'] ?? 0;
+                  final urgence = data['urgence'] ?? false;
+
+                  final displayNom = [nom, format, conditionnement]
+                      .where((e) => e.toString().trim().isNotEmpty)
+                      .join(" — ");
+
+                  return Medicament(
+                    nom: displayNom,
+                    stock: stock is int
+                        ? stock
+                        : int.tryParse(stock.toString()) ?? 0,
+                    prix: "$prix FCFA",
+                    urgence: urgence,
+                  );
+                }).toList();
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: meds.length,
+                  itemBuilder: (context, index) {
+                    return MedicamentCard(
+                      medicament: meds[index],
+                      isGuard: isGuard,
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildContactInfo(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
-    );
-  }
 }
+
 
 class MedicamentCard extends StatelessWidget {
   final Medicament medicament;
@@ -603,111 +620,182 @@ class MedicamentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockLevel = medicament.stock / 200;
-    final isLowStock = medicament.stock < 50;
+    // Stock max arbitraire (200 unités par défaut, adapte selon ton besoin)
+    const int maxStock = 200;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isGuard && medicament.urgence
-              ? Colors.red[300]!
-              : Colors.grey[300]!,
-          width: isGuard && medicament.urgence ? 2 : 1,
+    // Normalisation du niveau de stock (entre 0.0 et 1.0)
+    final double stockLevel =
+    (maxStock == 0 ? 0.0 : (medicament.stock / maxStock))
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    final bool isLowStock = medicament.stock < 50 && medicament.stock > 0;
+    final bool isOutOfStock = medicament.stock == 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isGuard
+              ? const Color(0xFFEF4444).withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      color: isGuard && medicament.urgence ? Colors.red[50] : Colors.grey[50],
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête avec nom et badge urgence
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    medicament.nom,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        medicament.nom,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          medicament.prix,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                if (isGuard && medicament.urgence)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'URGENCE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 12),
+                Column(
+                  children: [
+                    if (isGuard && medicament.urgence)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'URGENT',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isOutOfStock
+                            ? Colors.red.withOpacity(0.1)
+                            : isLowStock
+                            ? Colors.orange.withOpacity(0.1)
+                            : Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${medicament.stock} unités',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isOutOfStock
+                              ? Colors.red[700]
+                              : isLowStock
+                              ? Colors.orange[700]
+                              : Colors.green[700],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // Informations du médicament
-            Text(
-              'Stock: ${medicament.stock} unités',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Prix: ${medicament.prix}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Barre de stock
+            // Stock indicator
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: double.infinity,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isLowStock ? Colors.red[200] : Colors.green[200],
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: stockLevel.clamp(0.0, 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isLowStock ? Colors.red : Colors.green,
-                        borderRadius: BorderRadius.circular(3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Niveau de stock',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
+                    Text(
+                      isOutOfStock
+                          ? 'Épuisé'
+                          : isLowStock
+                          ? 'Stock faible'
+                          : 'Disponible',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isOutOfStock
+                            ? Colors.red[600]
+                            : isLowStock
+                            ? Colors.orange[600]
+                            : Colors.green[600],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  isLowStock ? 'Stock faible' : 'Stock disponible',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isLowStock ? Colors.red[600] : Colors.green[600],
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: stockLevel,
+                    minHeight: 8,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isOutOfStock
+                          ? Colors.red
+                          : isLowStock
+                          ? Colors.orange
+                          : Colors.green,
+                    ),
                   ),
                 ),
               ],
@@ -719,27 +807,29 @@ class MedicamentCard extends StatelessWidget {
   }
 }
 
-// Modèles de données
+
+// ====== Models ======
+
 class Pharmacy {
   final int id;
+  final String docId;
   final String nom;
   final String adresse;
   final String telephone;
   final String horaires;
   final String proprietaire;
   final String status;
-  final String? dateGarde;
   final List<Medicament> medicaments;
 
   Pharmacy({
     required this.id,
+    required this.docId,
     required this.nom,
     required this.adresse,
     required this.telephone,
     required this.horaires,
     required this.proprietaire,
     required this.status,
-    this.dateGarde,
     required this.medicaments,
   });
 }

@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
        fontFamily: "Poppins"
       ),
-      home: LandingPage(),
+      home: LoginPage(),
       routes: {
     '/medicaments': (context) => ListesMedicamentsPage(),
     '/pharmacies': (context) => ListesPharmaciesPage(),

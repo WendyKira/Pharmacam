@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pharm/modules/landing/views/pharmacie/assistant_IA.dart';
 import 'package:pharm/modules/landing/views/pharmacie/liste_commande.dart';
 import 'package:pharm/modules/landing/views/pharmacie/listes_produits.dart';
 import 'package:pharm/modules/landing/views/pharmacie/paramettres.dart';
@@ -42,7 +43,7 @@ class _PharmacieDashboardState extends State<PharmacieDashboardPage>
       ListesProduitsPage(),   // 1 -> Produits
       GestionCommandesPage(), // 2 -> Commandes
       GardePage(),            // 3 -> Garde
-      SizedBox.shrink(),      // 4 -> Assistant IA (placeholder)
+      AssistantIAPage(),      // 4 -> Assistant IA
       ParametresPage(),       // 5 -> Paramètres
     ];
 

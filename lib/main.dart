@@ -5,6 +5,9 @@ import 'package:pharm/modules/landing/views/admin/gererutilisateurs.dart';
 import 'package:pharm/modules/landing/views/loginphar.dart';
 import 'package:pharm/modules/landing/views/patient/gerer_ordonnances.dart';
 import 'package:pharm/modules/landing/views/patient/landing_page.dart';
+import 'package:pharm/modules/landing/views/patient/modemtn_page.dart';
+import 'package:pharm/modules/landing/views/patient/modeom_page.dart';
+import 'package:pharm/modules/landing/views/patient/modepaiement_page.dart';
 import 'package:pharm/modules/landing/views/pharmacie/dashboard_pharm_page.dart';
 import 'composants/screenmanage.dart';
 import 'firebase_options.dart';
@@ -37,7 +40,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
        fontFamily: "Poppins"
       ),
-      home: LoginPharPage(),
+      home: MtnPaymentPage(),
       routes: {
     '/medicaments': (context) => ListesMedicamentsPage(),
     '/pharmacies': (context) => ListesPharmaciesPage(),

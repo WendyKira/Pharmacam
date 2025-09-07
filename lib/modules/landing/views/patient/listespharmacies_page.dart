@@ -3,6 +3,9 @@ import 'package:pharm/composants/custom_bottom.dart';
 import 'package:pharm/utilitaires/apps_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart'; // ✅ pour lancer les appels
+import 'package:pharm/modules/landing/views/patient/modepaiement_page.dart';
+
+// 🆕 Import de la page de mode de paiement
 
 class ListesPharmaciesPage extends StatefulWidget {
   const ListesPharmaciesPage({Key? key}) : super(key: key);
@@ -616,10 +619,12 @@ class MedicamentsBottomSheet extends StatelessWidget {
                       .where((e) => e.toString().trim().isNotEmpty)
                       .join(" — ");
 
-                  return Medicament(
+                  return MedicamentData(
+                    id: doc.id,
                     nom: displayNom,
-                    prix: "$prix FCFA",
+                    prix: prix,
                     urgence: urgence,
+                    pharmacyDocId: pharmacy.docId,
                   );
                 }).toList();
 
@@ -643,7 +648,7 @@ class MedicamentsBottomSheet extends StatelessWidget {
 }
 
 class MedicamentCard extends StatelessWidget {
-  final Medicament medicament;
+  final MedicamentData medicament;
   final bool isGuard;
 
   const MedicamentCard({
@@ -651,6 +656,46 @@ class MedicamentCard extends StatelessWidget {
     required this.medicament,
     required this.isGuard,
   }) : super(key: key);
+
+  void _handleOrder(BuildContext context, MedicamentData medicament) {
+    // Animation de feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Commande ajoutée : ${medicament.nom}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // Ici vous pouvez ajouter votre logique de commande
+    // Par exemple : ajouter au panier, envoyer à Firestore, etc.
+    print('Commander: ${medicament.nom} - ${medicament.prix} FCFA');
+    print('Pharmacy ID: ${medicament.pharmacyDocId}');
+    print('Product ID: ${medicament.id}');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -675,64 +720,115 @@ class MedicamentCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    medicament.nom,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        medicament.nom,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${medicament.prix} FCFA',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                ),
+                const SizedBox(width: 12),
+                if (isGuard && medicament.urgence)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      medicament.prix,
+                    child: const Text(
+                      'URGENT',
                       style: TextStyle(
-                        fontSize: 14,
+                        color: Colors.white,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(width: 12),
-            if (isGuard && medicament.urgence)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
+            const SizedBox(height: 16),
+            // 🆕 Bouton Commander soft
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () => _handleOrder(context, medicament),
+                style: TextButton.styleFrom(
+                  backgroundColor: isGuard
+                      ? const Color(0xFFEF4444).withOpacity(0.08)
+                      : AppColors.primary.withOpacity(0.08),
+                  foregroundColor: isGuard
+                      ? const Color(0xFFEF4444)
+                      : AppColors.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isGuard
+                          ? const Color(0xFFEF4444).withOpacity(0.2)
+                          : AppColors.primary.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444),
-                  borderRadius: BorderRadius.circular(6),
+                icon: Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 18,
+                  color: isGuard
+                      ? const Color(0xFFEF4444)
+                      : AppColors.primary,
                 ),
-                child: const Text(
-                  'URGENT',
+                label: Text(
+                  'Commander',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+                    color: isGuard
+                        ? const Color(0xFFEF4444)
+                        : AppColors.primary,
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -774,6 +870,23 @@ class Medicament {
   Medicament({
     required this.nom,
     required this.prix,
+    this.urgence = false,
+  });
+}
+
+// 🆕 Nouveau modèle pour les données complètes du médicament
+class MedicamentData {
+  final String id;
+  final String nom;
+  final int prix;
+  final bool urgence;
+  final String pharmacyDocId;
+
+  MedicamentData({
+    required this.id,
+    required this.nom,
+    required this.prix,
+    required this.pharmacyDocId,
     this.urgence = false,
   });
 }

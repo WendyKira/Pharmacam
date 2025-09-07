@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pharm/composants/custom_bottom.dart';
 import 'package:pharm/utilitaires/apps_colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ pour Firestore
 import 'message_page.dart';
 import 'map_page.dart';
 import 'setting_page.dart';
 import 'profile_page.dart';
-
 
 class HomePage extends StatefulWidget {
   @override
@@ -15,11 +15,75 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   TextEditingController _searchController = TextEditingController();
 
+  List<Map<String, dynamic>> _searchResults = []; // ✅ résultats de recherche
+  bool _isSearching = false;
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
+
+  Future<void> _searchProducts(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      setState(() {
+        _searchResults.clear();
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchResults.clear();
+    });
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      List<Map<String, dynamic>> tempResults = [];
+
+      // 🔹 Étape 1 : Récupérer uniquement les users avec role = "Pharmacie"
+      final pharmaciesSnapshot = await firestore
+          .collection("users")
+          .where("role", isEqualTo: "Pharmacie")
+          .get();
+
+      // 🔹 Étape 2 : Pour chaque pharmacie → chercher dans sa sous-collection produits
+      for (var pharmacyDoc in pharmaciesSnapshot.docs) {
+        final nom = pharmacyDoc.data()["nom"] ?? "Pharmacie inconnue";
+
+        final produitsSnapshot = await pharmacyDoc.reference
+            .collection("produits")
+            .where("name", isGreaterThanOrEqualTo: q)
+            .where("name", isLessThanOrEqualTo: q + '\uf8ff')
+            .get();
+
+        for (var produitDoc in produitsSnapshot.docs) {
+          final produitData = produitDoc.data();
+          tempResults.add({
+            "pharmacie": nom,
+            "nom": produitData["name"] ?? "Produit inconnu",
+            "prix": produitData["price"]?.toString() ?? "Prix non défini",
+          });
+        }
+      }
+
+      // 🔹 Étape 3 : Mettre à jour la liste affichée
+      setState(() {
+        _searchResults = tempResults;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print("Erreur recherche Firestore: $e");
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -80,27 +144,77 @@ class _HomePageState extends State<HomePage> {
               ),
 
               // Search Bar
-                Container(
-                  padding: EdgeInsets.all(16),
-                  color: AppColors.surface,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.textTertiary.withOpacity(0.3)),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher médicaments, ',
-                        hintStyle: TextStyle(color: AppColors.textTertiary),
-                        prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
+              Container(
+                padding: EdgeInsets.all(16),
+                color: AppColors.surface,
+                child: Column(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.textTertiary.withOpacity(0.3)),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          _searchProducts(value.trim());
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher médicaments...',
+                          hintStyle: TextStyle(color: AppColors.textTertiary),
+                          prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.all(16),
+                        ),
                       ),
                     ),
-                  ),
+
+                    // ✅ Résultats recherche
+                    if (_isSearching)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Center(
+                          child: CircularProgressIndicator(color: AppColors.primaryLight),
+                        ),
+                      ),
+                    if (_searchResults.isNotEmpty)
+                      Container(
+                        margin: EdgeInsets.only(top: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.textTertiary.withOpacity(0.1),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final produit = _searchResults[index];
+                            return ListTile(
+                              leading: Icon(Icons.medication, color: AppColors.error),
+                              title: Text(
+                                produit["nom"],
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                "Prix: ${produit["prix"]} | Pharmacie: ${produit["pharmacie"]}",
+                                style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
                 ),
+              ),
 
               // Image avec texte (Card promotionnelle)
               Container(
@@ -134,11 +248,9 @@ class _HomePageState extends State<HomePage> {
                         image: DecorationImage(
                           image: AssetImage('assets/images/imge3.png'),
                           fit: BoxFit.contain,
-                          onError: (error, stackTrace) {
-                          },
+                          onError: (error, stackTrace) {},
                         ),
                       ),
-                      // Fallback: affichage d'un placeholder si l'image n'existe pas
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.asset(
@@ -172,7 +284,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    // Texte en bas
                     Text(
                       'Votre santé, notre priorité',
                       style: TextStyle(
@@ -181,7 +292,6 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     SizedBox(height: 16),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),

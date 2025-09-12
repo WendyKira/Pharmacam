@@ -329,6 +329,32 @@ class _AdminDashboardState extends State<AdminDashboardPage> with TickerProvider
     );
   }
 
+  // 👉 Nouveau : switch case pour gérer les onglets
+  Widget _getSelectedPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardContent(); // Dashboard
+      case 1:
+        return const Center(child: Text("Page Gestion des Utilisateurs"));
+      case 2:
+        return const Center(child: Text("Page Gestion des Annonces"));
+      case 3:
+        return const Center(child: Text("Page Notifications"));
+      case 6:
+        return const Center(child: Text("Page Paramètres"));
+      default:
+        return const Center(child: Text("Page en construction..."));
+    }
+  }
+
+  // 👉 Correction : ne plus utiliser Navigator, juste setState
+  void _navigateToPage(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+
   Widget _buildSidebar() {
     return Column(
       children: [
@@ -628,25 +654,6 @@ class _AdminDashboardState extends State<AdminDashboardPage> with TickerProvider
     );
   }
 
-  void _navigateToPage(int index) {
-    switch (index) {
-      case 0:
-        Navigator.pushNamed(context, '/dashboard');
-        break;
-      case 1:
-        Navigator.pushNamed(context, '/gestion_utilisateurs');
-        break;
-      case 2:
-        Navigator.pushNamed(context, '/gestion_annonces');
-        break;
-      case 3:
-        Navigator.pushNamed(context, '/notifications');
-        break;
-      case 6:
-        Navigator.pushNamed(context, '/parametres');
-        break;
-    }
-  }
 
   Widget _buildHeader() {
     return Container(

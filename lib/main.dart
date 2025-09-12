@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
        fontFamily: "Poppins"
       ),
-      home: MtnPaymentPage(),
+      home: LoginPharPage(),
       routes: {
     '/medicaments': (context) => ListesMedicamentsPage(),
     '/pharmacies': (context) => ListesPharmaciesPage(),
